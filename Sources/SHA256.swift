@@ -155,8 +155,8 @@ final public class SHA256 {
             bytes[totalBytes - 1 - j] = (bytesPointer + j).pointee
         }
         
-        valuePointer.deinitialize()
-        valuePointer.deallocate(capacity: 1)
+		valuePointer.deinitialize(count: 1)
+        valuePointer.deallocate()
         
         return bytes
     }
@@ -198,23 +198,19 @@ internal func bitPadding(to data: Array<UInt8>, blockSize: Int, allowance: Int =
     return tmp
 }
 
-internal struct BytesSequence<D: RandomAccessCollection>: Sequence where D.Iterator.Element == UInt8,
-    D.IndexDistance == Int,
-    D.SubSequence.IndexDistance == Int,
-D.Index == Int {
-    let chunkSize: D.IndexDistance
+internal struct BytesSequence<D: RandomAccessCollection>: Sequence where D.Iterator.Element == UInt8 {
+	
+	let chunkSize: Int
     let data: D
     
-    func makeIterator() -> AnyIterator<D.SubSequence> {
-        var offset = data.startIndex
-        return AnyIterator {
-            let end = Swift.min(self.chunkSize, self.data.count - offset)
-            let result = self.data[offset..<offset + end]
-            offset = offset.advanced(by: result.count)
-            if !result.isEmpty {
-                return result
-            }
-            return nil
-        }
-    }
+	func makeIterator() -> AnyIterator<D.SubSequence> {
+		var offset = data.startIndex
+		return AnyIterator {
+			let size = Swift.min(self.chunkSize, self.data.distance(from: offset, to: self.data.endIndex))
+			let next = self.data.index(offset, offsetBy: size)
+			let result = self.data[offset..<next]
+			offset = next
+			return result.isEmpty ? nil : result
+		}
+	}
 }
